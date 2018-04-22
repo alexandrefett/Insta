@@ -44,6 +44,8 @@ public class InstaService {
 
     public Account find(String id) throws IOException{
         long userid = Long.valueOf(id);
+        System.out.println("userid:" + userid);
+        System.out.println("--------------");
         return instagram.getAccountById(userid);
     }
 
@@ -64,16 +66,16 @@ public class InstaService {
         String name = URLDecoder.decode(body.queryParams("username"),"UTF-8");
         String password = URLDecoder.decode(body.queryParams("password"),"UTF-8");
         doLogin(name, password);
-        this.account = instagram.getAccountByUsername("hoteiseverest");
-        return this.account;
+        this.account = find("3472751680");
+        return account;
     }
 
-    private Account doLogin(String username, String password) throws IOException{
+    private void doLogin(String username, String password) throws IOException{
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
         loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
         OkHttpClient httpClient = new OkHttpClient.Builder()
                 .addNetworkInterceptor(loggingInterceptor)
-                .addInterceptor(new UserAgentInterceptor(UserAgents.WIN10_CHROME))
+                .addInterceptor(new UserAgentInterceptor(UserAgents.OSX_CHROME))
                 .addInterceptor(new ErrorInterceptor())
                 .cookieJar(new DefaultCookieJar(new CookieHashSet()))
                 .build();
@@ -81,8 +83,6 @@ public class InstaService {
         this.instagram.basePage();
         this.instagram.login(username, password);
         this.instagram.basePage();
-
-        return instagram.getAccountByUsername("hoteiseverest");
     }
 }
 
