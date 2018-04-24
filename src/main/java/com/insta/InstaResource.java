@@ -26,11 +26,18 @@ public class InstaResource {
             return instaService.login(req);
         }, new JsonTransformer());
 
+        get(API_CONTEXT + "/requested", (req, res) -> {
+            return instaService.requested(req);
+        }, new JsonTransformer());
+
         get(API_CONTEXT + "/users/id/:id", "application/json", (request, response)
                 -> instaService.find(request.params(":id")), new JsonTransformer());
 
-        get(API_CONTEXT + "/reset", "application/json", (request, response)
-                -> instaService.reset(), new JsonTransformer());
+        get(API_CONTEXT + "/status", "application/json", (request, response)
+                -> instaService.status(), new JsonTransformer());
+
+        get(API_CONTEXT + "/follow/id/:id", "application/json", (request, response)
+                -> instaService.doFollow(request.params(":id")), new JsonTransformer());
 
     }
 
