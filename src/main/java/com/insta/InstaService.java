@@ -16,7 +16,9 @@ import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import org.bson.Document;
 import spark.Request;
-import java.io.IOException;
+import spark.Response;
+
+import java.io.*;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -29,10 +31,12 @@ public class InstaService {
     private Instagram instagram;
     private Account account;
     private List<Account> fol;
+    private List<String> whitelist;
 
     public InstaService(MongoDatabase db) {
         this.db = db;
         this.requested = db.getCollection("requested");
+        this.whitelist = whitelist();
     }
 
     public void setF(List<Account> f){
@@ -40,6 +44,73 @@ public class InstaService {
     }
 
     public String doFollow(String id){
+        if(instagram==null)
+            return "Need login";
+
+        try{
+            final List<Account> f =  followers(id);
+            setF(f);
+        }
+        catch(IOException e){
+            e.printStackTrace();
+        }
+
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    for (Account a:fol) {
+                        System.out.println("Node: "+a.toString());
+                        if(!a.getRequestedByViewer() && !a.getFollowedByViewer()){
+                            instagram.followAccount(a.getId());
+                            addRequestedAccount(a);
+                            Thread.sleep(3000);
+                        }
+                    }
+                }
+                catch(IOException e){
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }.start();
+
+        return "followers: " + this.fol.size();
+    }
+
+    public List<String> whitelist(){
+        ArrayList<String> r  = new ArrayList<String>();
+
+        File f = new File("whitelist.csv");
+        if(f.exists()){
+            BufferedReader br = null;
+            String line = "";
+            try {
+                br = new BufferedReader(new FileReader("whitelist.csv"));
+                String username="";
+                while ((line = br.readLine()) != null) {
+                    r.add(line);
+                }
+
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                if (br != null) {
+                    try {
+                        br.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+        return r;
+    }
+
+    public String doUnFollow(String id){
         if(instagram==null)
             return "Need login";
 
@@ -83,6 +154,9 @@ public class InstaService {
         Document d = new Document("user", a.getUsername())
                 .append("id", ""+a.getId())
                 .append("fullname", a.getFullName())
+                .append("profilepicurl", a.getProfilePicUrl())
+                .append("requeste_by_viewer", a.getRequestedByViewer())
+                .append("followed_by_viewer", a.getFollowedByViewer())
                 .append("date", ""+Calendar.getInstance().getTimeInMillis());
         requested.insertOne(d);
     }
@@ -97,10 +171,10 @@ public class InstaService {
 
 
     public Account find(String id) throws IOException{
-        long userid = Long.valueOf(id);
-        System.out.println("userid:" + userid);
+        //long userid = Long.valueOf(id);
+        //System.out.println("userid:" + userid);
         System.out.println("--------------");
-        return instagram.getAccountById(userid);
+        return instagram.getAccountByUsername(id);
     }
 
     public String requested(Request body) throws IOException {
@@ -121,13 +195,13 @@ public class InstaService {
         String name = URLDecoder.decode(body.queryParams("username"),"UTF-8");
         String password = URLDecoder.decode(body.queryParams("password"),"UTF-8");
         doLogin(name, password);
-        this.account = find("3472751680");
+        this.account = find("hoteiseverest");
         return account;
     }
 
     private void doLogin(String username, String password) throws IOException{
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BASIC);
+        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.HEADERS);
         OkHttpClient httpClient = new OkHttpClient.Builder()
                 .addNetworkInterceptor(loggingInterceptor)
                 .addInterceptor(new UserAgentInterceptor(UserAgents.OSX_CHROME))

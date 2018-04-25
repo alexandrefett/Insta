@@ -1,5 +1,7 @@
 package com.insta;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import lombok.AllArgsConstructor;
 import me.postaddict.instagram.scraper.AuthenticatedInsta;
 import me.postaddict.instagram.scraper.MediaUtil;
@@ -13,10 +15,18 @@ import me.postaddict.instagram.scraper.request.parameters.MediaCode;
 import me.postaddict.instagram.scraper.request.parameters.TagName;
 import me.postaddict.instagram.scraper.request.parameters.UserParameter;
 import okhttp3.*;
+import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static sun.plugin2.util.PojoUtil.toJson;
 
 @AllArgsConstructor
 public class Instagram implements AuthenticatedInsta {
@@ -25,9 +35,16 @@ public class Instagram implements AuthenticatedInsta {
     protected final OkHttpClient httpClient;
     protected final Mapper mapper;
     protected final DelayHandler delayHandler;
+    private String rhxgis;
 
     public Instagram(OkHttpClient httpClient) {
         this(httpClient, new ModelMapper(), new DefaultDelayHandler());
+    }
+
+    public Instagram(OkHttpClient httpClient, ModelMapper modelMapper, DefaultDelayHandler defaultDelayHandler) {
+        this.httpClient = httpClient;
+        this.mapper = modelMapper;
+        this.delayHandler = defaultDelayHandler;
     }
 
     protected Request withCsrfToken(Request request) {
@@ -49,8 +66,19 @@ public class Instagram implements AuthenticatedInsta {
                 .build();
 
         Response response = executeHttpRequest(request);
+        getRhxGis(response);
         try (ResponseBody body = response.body()){
             //release connection
+        }
+    }
+
+    private void getRhxGis(Response response) throws IOException {
+
+        Pattern p = Pattern.compile("\"rhx_gis\":\"([a-f0-9]{32})\"");
+        Matcher m = p.matcher(response.body().string());
+        if (m.find()) {
+            this.rhxgis =m.group(1);  // The matched substring
+            System.out.println("rhxgis: "+this.rhxgis);
         }
     }
 
@@ -89,9 +117,25 @@ public class Instagram implements AuthenticatedInsta {
         }
     }
 
+    private String genMD5(String rhxgis, String variables){
+        MessageDigest m = null;
+        try {
+            m = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        String v = String.join(":", rhxgis, "/"+variables+"/");
+        m.update(v.getBytes(),0,v.length());
+        System.out.println("MD5: "+new BigInteger(1,m.digest()).toString(16));
+        return new BigInteger(1,m.digest()).toString(16);
+    }
+
     public Account getAccountByUsername(String username) throws IOException {
         Request request = new Request.Builder()
                 .url(Endpoint.getAccountId(username))
+                .header(Endpoint.REFERER, Endpoint.BASE_URL + "/"+username+ "/")
+                .header(Endpoint.X_INSTAGRAM_GIS, genMD5(this.rhxgis, username))
+                .header("x-requested-with", "XMLHttpRequest")
                 .build();
         Response response = executeHttpRequest(request);
         try(InputStream jsonStream = response.body().byteStream()) {
