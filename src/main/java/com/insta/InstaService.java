@@ -49,28 +49,30 @@ public class InstaService {
         this.fol = f;
     }
 
-    public String doFollow(String id){
+    public StandardResponse doFollow(String id){
         if(instagram==null)
-            return "Need login";
-
-        try{
-            final List<Account> f =  followers(id, 10);
-            setF(f);
-        }
-        catch(IOException e){
-            e.printStackTrace();
-        }
+            return new StandardResponse(StatusResponse.ERROR, "Do login first");
 
         new Thread() {
             @Override
             public void run() {
                 try {
+                    int i = 0;
+                    final List<Account> f =  followers(id, 10);
+                    setF(f);
+
                     for (Account a:fol) {
-                        System.out.println("Node: "+a.toString());
+                        System.out.println("i="+i+"username: "+a.getUsername());
                         if(!a.getRequestedByViewer() && !a.getFollowedByViewer()){
+                            i++;
                             instagram.followAccount(a.getId());
                             addRequestedAccount(a);
                             sleep(3000);
+                        }
+                        if(i==40){
+                            System.out.println("i="+i+"username: "+a.getUsername());
+                            i = 0;
+                            sleep(1000 * 60 * 20);
                         }
                     }
                 }
@@ -82,7 +84,7 @@ public class InstaService {
             }
         }.start();
 
-        return "followers: " + this.fol.size();
+        return new StandardResponse(StatusResponse.SUCCESS, "Thread started");
     }
 
     public List<String> whitelist(){
@@ -195,14 +197,6 @@ public class InstaService {
         return instagram.getFollowers(Long.parseLong(id), pagecount).getNodes();
     }
 
-
-    public Account find(String id) throws IOException{
-        long userid = Long.valueOf(id);
-        System.out.println("userid:" + userid);
-        System.out.println("--------------");
-        return instagram.getAccountById(userid);
-    }
-
     public String requested(Request body) throws IOException {
         String r="";
         MongoCursor<Document> cursor = requested.find().iterator();
@@ -221,7 +215,7 @@ public class InstaService {
         String name = URLDecoder.decode(body.queryParams("username"),"UTF-8");
         String password = URLDecoder.decode(body.queryParams("password"),"UTF-8");
         doLogin(name, password);
-        this.account = find("3472751680");
+        this.account = instagram.getAccountById(Long.valueOf("3472751680"));
         return account;
     }
 
