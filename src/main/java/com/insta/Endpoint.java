@@ -5,7 +5,7 @@ import lombok.experimental.UtilityClass;
 @UtilityClass
 public class Endpoint {
     public static final String REFERER = "Referer";
-    public static final String X_INSTAGRAM_GIS = "x-instagram-gis";
+    public static final String X_INSTAGRAM_GIS = "X-Instagram-gis";
     public static final String BASE_URL = "https://www.instagram.com";
     public static final String LOGIN_URL = "https://www.instagram.com/accounts/login/ajax/";
     public static final String MEDIA_LINK = "https://www.instagram.com/p/{{code}}";

@@ -49,6 +49,18 @@ public class InstaService {
         this.fol = f;
     }
 
+    public StandardResponse find(String username){
+        if(instagram==null)
+            return new StandardResponse(StatusResponse.ERROR, "Do login first");
+        try {
+            return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(instagram.getAccountByUsername(username)));
+        }
+        catch(IOException e){
+            e.printStackTrace();
+            return new StandardResponse(StatusResponse.ERROR, e.getMessage());
+        }
+    }
+
     public StandardResponse doFollow(String id){
         if(instagram==null)
             return new StandardResponse(StatusResponse.ERROR, "Do login first");
@@ -221,10 +233,10 @@ public class InstaService {
 
     private void doLogin(String username, String password) throws IOException{
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.NONE);
+        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.HEADERS);
         OkHttpClient httpClient = new OkHttpClient.Builder()
                 .addNetworkInterceptor(loggingInterceptor)
-                .addInterceptor(new UserAgentInterceptor(UserAgents.OSX_CHROME))
+                .addInterceptor(new UserAgentInterceptor(UserAgents.WIN10_CHROME))
                 .addInterceptor(new ErrorInterceptor())
                 .cookieJar(new DefaultCookieJar(new CookieHashSet()))
                 .build();
