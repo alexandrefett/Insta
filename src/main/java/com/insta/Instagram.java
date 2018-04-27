@@ -1,13 +1,15 @@
 package com.insta;
 
+import com.fett.mapper.Mapper2;
+import com.fett.mapper.ModelMapper2;
+import com.fett.request.GetFollowersRequest;
+import com.fett.request.GetFollowsRequest;
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import lombok.AllArgsConstructor;
+import com.fett.model.Search;
 import me.postaddict.instagram.scraper.AuthenticatedInsta;
 import me.postaddict.instagram.scraper.MediaUtil;
 import me.postaddict.instagram.scraper.exception.InstagramAuthException;
-import me.postaddict.instagram.scraper.mapper.Mapper;
-import me.postaddict.instagram.scraper.mapper.ModelMapper;
 import me.postaddict.instagram.scraper.model.*;
 import me.postaddict.instagram.scraper.request.*;
 import me.postaddict.instagram.scraper.request.parameters.LocationParameter;
@@ -15,8 +17,6 @@ import me.postaddict.instagram.scraper.request.parameters.MediaCode;
 import me.postaddict.instagram.scraper.request.parameters.TagName;
 import me.postaddict.instagram.scraper.request.parameters.UserParameter;
 import okhttp3.*;
-import org.json.JSONObject;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
@@ -26,22 +26,20 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static sun.plugin2.util.PojoUtil.toJson;
-
 @AllArgsConstructor
 public class Instagram implements AuthenticatedInsta {
 
     private static final PageInfo FIRST_PAGE = new PageInfo(true, "");
     protected final OkHttpClient httpClient;
-    protected final Mapper mapper;
+    protected final Mapper2 mapper;
     protected final DelayHandler delayHandler;
     private String rhxgis;
 
     public Instagram(OkHttpClient httpClient) {
-        this(httpClient, new ModelMapper(), new DefaultDelayHandler());
+        this(httpClient, new ModelMapper2(), new DefaultDelayHandler());
     }
 
-    public Instagram(OkHttpClient httpClient, ModelMapper modelMapper, DefaultDelayHandler defaultDelayHandler) {
+    public Instagram(OkHttpClient httpClient, ModelMapper2 modelMapper, DefaultDelayHandler defaultDelayHandler) {
         this.httpClient = httpClient;
         this.mapper = modelMapper;
         this.delayHandler = defaultDelayHandler;
@@ -133,14 +131,27 @@ public class Instagram implements AuthenticatedInsta {
     public Account getAccountByUsername(String username) throws IOException {
         Request request = new Request.Builder()
                 .url(Endpoint.getAccountId(username))
-                .header(Endpoint.REFERER, Endpoint.BASE_URL + "/"+username+ "/")
-                .header(Endpoint.X_INSTAGRAM_GIS, genMD5(this.rhxgis, username))
-                .header("x-requested-with", "XMLHttpRequest")
+                .addHeader(Endpoint.REFERER, Endpoint.BASE_URL + "/"+username+ "/")
+                .addHeader(Endpoint.X_INSTAGRAM_GIS, genMD5(this.rhxgis, username))
+                .addHeader("X-Requested-with", "XMLHttpRequest")
+                .addHeader("Accept-encoding", "gzip, deflate, br")
                 .build();
         Response response = executeHttpRequest(request);
         try(InputStream jsonStream = response.body().byteStream()) {
             return mapper.mapAccount(jsonStream);
         }
+    }
+
+    public Search getSearchUserByUsername(String username) throws IOException {
+        Request request = new Request.Builder()
+                .url(Endpoint.getSearchUserByUsername(username))
+                .addHeader(Endpoint.REFERER, Endpoint.BASE_URL)
+                .build();
+        Response response = executeHttpRequest(request);
+        String jsonStream = response.body().string();
+        Gson gson = new Gson();
+        Search s = gson.fromJson(jsonStream, Search.class);
+        return s;
     }
 
     public PageObject<Media> getMedias(String username, int pageCount) throws IOException {
@@ -182,7 +193,6 @@ public class Instagram implements AuthenticatedInsta {
         try(InputStream jsonStream = response.body().byteStream()) {
             return mapper.mapTag(jsonStream);
         }
-
     }
 
     public Location getLocationMediasById(String locationId, int pageCount) throws IOException {
@@ -257,7 +267,7 @@ public class Instagram implements AuthenticatedInsta {
     }
 
     public PageObject<Account> getFollowers(long userId, int pageCount) throws IOException {
-        com.insta.GetFollowersRequest getFollowersRequest = new com.insta.GetFollowersRequest(httpClient, mapper, delayHandler);
+        GetFollowersRequest getFollowersRequest = new GetFollowersRequest(httpClient, mapper, delayHandler);
         return getFollowersRequest.requestInstagramResult(new UserParameter(userId),pageCount, FIRST_PAGE);
     }
 

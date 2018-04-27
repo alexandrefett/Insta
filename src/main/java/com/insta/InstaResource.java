@@ -1,5 +1,7 @@
 package com.insta;
 
+import com.google.gson.Gson;
+
 import static spark.Spark.get;
 import static spark.Spark.put;
 
@@ -38,6 +40,14 @@ public class InstaResource {
 
         get(API_CONTEXT + "/follow/id/:id", "application/json", (request, response)
                 -> instaService.doFollow(request.params(":id")), new JsonTransformer());
+
+        get(API_CONTEXT + "/unfollow", "application/json", (request, response)
+                -> new Gson().toJson(instaService.doUnFollow()), new JsonTransformer());
+
+        get(API_CONTEXT + "/search/id/:username", "application/json", (request, response)
+                -> instaService.getSearchUser(request.params(":username")), new JsonTransformer());
+
+
 
     }
 

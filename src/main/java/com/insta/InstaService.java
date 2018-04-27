@@ -1,5 +1,9 @@
 package com.insta;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.insta.Response.StandardResponse;
+import com.insta.Response.StatusResponse;
 import com.mongodb.MongoException;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
@@ -16,13 +20,14 @@ import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
 import org.bson.Document;
 import spark.Request;
-import spark.Response;
-
 import java.io.*;
 import java.net.URLDecoder;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+
+import static java.lang.Thread.sleep;
 
 
 public class InstaService {
@@ -32,6 +37,7 @@ public class InstaService {
     private Account account;
     private List<Account> fol;
     private List<String> whitelist;
+    private List<Account> following;
 
     public InstaService(MongoDatabase db) {
         this.db = db;
@@ -48,7 +54,7 @@ public class InstaService {
             return "Need login";
 
         try{
-            final List<Account> f =  followers(id);
+            final List<Account> f =  followers(id, 10);
             setF(f);
         }
         catch(IOException e){
@@ -64,7 +70,7 @@ public class InstaService {
                         if(!a.getRequestedByViewer() && !a.getFollowedByViewer()){
                             instagram.followAccount(a.getId());
                             addRequestedAccount(a);
-                            Thread.sleep(3000);
+                            sleep(3000);
                         }
                     }
                 }
@@ -110,40 +116,62 @@ public class InstaService {
         return r;
     }
 
-    public String doUnFollow(String id){
+    public StandardResponse doUnFollow(){
         if(instagram==null)
-            return "Need login";
-
-        try{
-            final List<Account> f =  followers(id);
-            setF(f);
-        }
-        catch(IOException e){
-            e.printStackTrace();
-        }
+            return new StandardResponse(StatusResponse.ERROR, "Do login first");
 
         new Thread() {
             @Override
             public void run() {
                 try {
-                    for (Account a:fol) {
-                        System.out.println("Node: "+a.toString());
-                        if(!a.getRequestedByViewer() && !a.getFollowedByViewer()){
-                            instagram.followAccount(a.getId());
-                            addRequestedAccount(a);
-                            Thread.sleep(3000);
+                    int i = 0;
+                    List<Account> f = instagram.getFollows(Long.valueOf("3472751680"), 15).getNodes();
+                    while (f.size() > 500) {
+                        for (Account a : f) {
+                            if (!whitelist.contains(a.getUsername())) {
+                                i++;
+                                instagram.unfollowAccount(a.getId());
+                                System.out.println("userid:" + a.getId() +"    username:"+a.getUsername());
+                                sleep(3000);
+                            }
+                            if(i==15) {
+                                System.out.println("Paused for 15min");
+                                sleep(1000 * 60 * 15);
+                                i = 0;
+                            }
                         }
+                        f = instagram.getFollows(Long.valueOf("3472751680"), 15).getNodes();
                     }
-                }
-                catch(IOException e){
+                } catch (UnknownHostException e) {
+                    try {
+                        System.out.println("UnkonowHostException");
+                        System.out.println("Paused for 1min");
+                        sleep(1000 * 60);
+                        doUnFollow();
+                    } catch (InterruptedException e1) {
+                        e1.printStackTrace();
+                    }
+
+                } catch (IOException e) {
                     e.printStackTrace();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
         }.start();
+        return new StandardResponse(StatusResponse.SUCCESS, "Thread started");
+    }
 
-        return "followers: " + this.fol.size();
+    public StandardResponse getSearchUser(String username){
+        if(instagram==null)
+            return new StandardResponse(StatusResponse.ERROR, "Do login first");
+
+        try {
+            return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(instagram.getSearchUserByUsername(username)));
+        } catch (IOException e) {
+            return new StandardResponse(StatusResponse.ERROR, e.getMessage());
+        }
+
     }
 
     public String status(){
@@ -161,20 +189,18 @@ public class InstaService {
         requested.insertOne(d);
     }
 
-    public List<Account> followers(String id) throws IOException{
+    public List<Account> followers(String id, int pagecount) throws IOException{
         if(instagram==null)
             return null;
-        return instagram.getFollowers(Long.parseLong(id), 1).getNodes();
-        //https://www.instagram.com/graphql/query/?query_hash=37479f2b8209594dde7facb0d904896a&variables=%7B%22id%22%3A%224966510341%22%2C%22first%22%3A24%7D
-
+        return instagram.getFollowers(Long.parseLong(id), pagecount).getNodes();
     }
 
 
     public Account find(String id) throws IOException{
-        //long userid = Long.valueOf(id);
-        //System.out.println("userid:" + userid);
+        long userid = Long.valueOf(id);
+        System.out.println("userid:" + userid);
         System.out.println("--------------");
-        return instagram.getAccountByUsername(id);
+        return instagram.getAccountById(userid);
     }
 
     public String requested(Request body) throws IOException {
@@ -195,13 +221,13 @@ public class InstaService {
         String name = URLDecoder.decode(body.queryParams("username"),"UTF-8");
         String password = URLDecoder.decode(body.queryParams("password"),"UTF-8");
         doLogin(name, password);
-        this.account = find("hoteiseverest");
+        this.account = find("3472751680");
         return account;
     }
 
     private void doLogin(String username, String password) throws IOException{
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.HEADERS);
+        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.NONE);
         OkHttpClient httpClient = new OkHttpClient.Builder()
                 .addNetworkInterceptor(loggingInterceptor)
                 .addInterceptor(new UserAgentInterceptor(UserAgents.OSX_CHROME))
@@ -214,10 +240,3 @@ public class InstaService {
         this.instagram.basePage();
     }
 }
-
-//https://www.instagram.com/graphql/query/?query_hash=37479f2b8209594dde7facb0d904896a&variables=%7B%22id%22%3A1341252671%2C%22first%22%3A24%7D
-//https://www.instagram.com/graphql/query/?query_hash=37479f2b8209594dde7facb0d904896a&variables=%7B%22id%22%3A1341252671%2C%22first%22%3A200%7D
-
-//https://www.instagram.com/graphql/query/?query_hash=37479f2b8209594dde7facb0d904896a&variables={%22id%22:%201341252671,%20%22first%22:%20200,%20%22after%22:%20%22%22}
-
-

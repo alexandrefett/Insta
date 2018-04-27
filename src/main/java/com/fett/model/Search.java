@@ -1,9 +1,8 @@
-package me.fett.model;
+package com.fett.model;
 
 import java.util.List;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import me.postaddict.instagram.scraper.model.Account;
 
 public class Search {
 

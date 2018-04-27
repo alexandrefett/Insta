@@ -1,4 +1,4 @@
-package me.fett.model;
+package com.fett.model;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
@@ -11,7 +11,7 @@ public class Users {
     private Integer position;
     @SerializedName("user")
     @Expose
-    private Account user;
+    private User user;
 
     public Integer getPosition() {
         return position;
@@ -21,11 +21,11 @@ public class Users {
         this.position = position;
     }
 
-    public Account getUser() {
+    public User getUser() {
         return user;
     }
 
-    public void setUser(Account user) {
+    public void setUser(User user) {
         this.user = user;
     }
 

@@ -30,6 +30,7 @@ public class Endpoint {
     public static final String UNFOLLOW_ACCOUNT = "https://www.instagram.com/web/friendships/{{userId}}/unfollow/";
     public static final String ACTIVITY_FEED = "https://www.instagram.com/accounts/activity/?__a=1";
     public static final String ACTIVITY_MARK_CHECKED = "https://www.instagram.com/web/activity/mark_checked/";
+    public static final String SEARCH_USERS = "https://www.instagram.com/web/search/topsearch/?context=user&query={{username}}";
     public static final String USERNAME = "{{username}}";
     public static final String USER_ID = "{{userId}}";
     public static final String MAX_ID = "{{maxId}}";
@@ -51,6 +52,10 @@ public class Endpoint {
 
     public static String getAccountJsonInfoLinkByAccountId(long userId) {
         return ACCOUNT_JSON_INFO_BY_ID.replace(USER_ID, "" + userId);
+    }
+
+    public static String getSearchUserByUsername(String username) {
+        return SEARCH_USERS.replace(USERNAME, "" + username);
     }
 
     public static String getAccountMediasJsonLink(long userId, String maxId) {
