@@ -81,7 +81,7 @@ public class InstaService {
                             addRequestedAccount(a);
                             sleep(3000);
                         }
-                        if(i==40){
+                        if(i==39){
                             System.out.println("i="+i+"username: "+a.getUsername());
                             i = 0;
                             sleep(1000 * 60 * 20);
@@ -233,7 +233,7 @@ public class InstaService {
 
     private void doLogin(String username, String password) throws IOException{
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.HEADERS);
+        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.NONE);
         OkHttpClient httpClient = new OkHttpClient.Builder()
                 .addNetworkInterceptor(loggingInterceptor)
                 .addInterceptor(new UserAgentInterceptor(UserAgents.WIN10_CHROME))
