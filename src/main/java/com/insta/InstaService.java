@@ -1,17 +1,13 @@
 package com.insta;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 import com.insta.Response.StandardResponse;
 import com.insta.Response.StatusResponse;
-import com.mongodb.MongoException;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.result.DeleteResult;
 import me.postaddict.instagram.scraper.cookie.CookieHashSet;
 import me.postaddict.instagram.scraper.cookie.DefaultCookieJar;
-import me.postaddict.instagram.scraper.exception.InstagramException;
 import me.postaddict.instagram.scraper.interceptor.ErrorInterceptor;
 import me.postaddict.instagram.scraper.interceptor.UserAgentInterceptor;
 import me.postaddict.instagram.scraper.interceptor.UserAgents;
@@ -27,9 +23,6 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
-import static java.lang.Thread.sleep;
-
-
 public class InstaService {
     private final MongoDatabase db;
     private final MongoCollection<Document> requested;
@@ -37,7 +30,6 @@ public class InstaService {
     private Account account;
     private List<Account> fol;
     private List<String> whitelist;
-    private List<Account> following;
 
     public InstaService(MongoDatabase db) {
         this.db = db;
@@ -72,25 +64,27 @@ public class InstaService {
                     int i = 0;
                     final List<Account> f =  followers(id, 10);
                     setF(f);
-
                     for (Account a:fol) {
-                        System.out.println("i="+i+"username: "+a.getUsername());
+                        System.out.print("i="+i+"username: "+a.getUsername());
                         if(!a.getRequestedByViewer() && !a.getFollowedByViewer()){
                             i++;
                             instagram.followAccount(a.getId());
+                            System.out.println("  OK");
                             addRequestedAccount(a);
-                            sleep(3000);
+                            sleep(5000);
                         }
                         if(i==39){
-                            System.out.println("i="+i+"username: "+a.getUsername());
+                            System.out.println("Paused for 20min.");
                             i = 0;
                             sleep(1000 * 60 * 20);
                         }
                     }
                 }
                 catch(IOException e){
+                    System.out.println("  OK");
                     e.printStackTrace();
                 } catch (InterruptedException e) {
+                    System.out.println("  OK");
                     e.printStackTrace();
                 }
             }
@@ -222,27 +216,27 @@ public class InstaService {
         return r;
     }
 
-    public Account login(Request body) throws IOException {
-        System.out.println("login: " + body.body());
+    public StandardResponse login(Request body) throws IOException {
         String name = URLDecoder.decode(body.queryParams("username"),"UTF-8");
         String password = URLDecoder.decode(body.queryParams("password"),"UTF-8");
-        doLogin(name, password);
-        this.account = instagram.getAccountById(Long.valueOf("3472751680"));
-        return account;
-    }
-
-    private void doLogin(String username, String password) throws IOException{
-        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.NONE);
-        OkHttpClient httpClient = new OkHttpClient.Builder()
-                .addNetworkInterceptor(loggingInterceptor)
-                .addInterceptor(new UserAgentInterceptor(UserAgents.WIN10_CHROME))
-                .addInterceptor(new ErrorInterceptor())
-                .cookieJar(new DefaultCookieJar(new CookieHashSet()))
-                .build();
-        this.instagram = new Instagram(httpClient);
-        this.instagram.basePage();
-        this.instagram.login(username, password);
-        this.instagram.basePage();
+        try{
+            HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
+            loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.NONE);
+            OkHttpClient httpClient = new OkHttpClient.Builder()
+                    .addNetworkInterceptor(loggingInterceptor)
+                    .addInterceptor(new UserAgentInterceptor(UserAgents.WIN10_CHROME))
+                    .addInterceptor(new ErrorInterceptor())
+                    .cookieJar(new DefaultCookieJar(new CookieHashSet()))
+                    .build();
+            this.instagram = new Instagram(httpClient);
+            this.instagram.basePage();
+            this.instagram.login(name, password);
+            this.instagram.basePage();
+            return new StandardResponse(StatusResponse.SUCCESS, "OK");
+        }
+        catch(IOException e){
+            e.printStackTrace();
+            return new StandardResponse(StatusResponse.ERROR, e.getMessage());
+        }
     }
 }

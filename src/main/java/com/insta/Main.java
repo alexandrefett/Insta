@@ -21,14 +21,12 @@ public class Main {
     }
 
     private static MongoDatabase mongo() throws Exception {
-        System.setProperty("java.net.preferIPv4Stack" , "true");
-        //MongoClientURI uri = new MongoClientURI("mongodb+srv://alexandrefett:fvrAqxTY4IIiPtSO@everest-2ne3f.mongodb.net/test");
-        MongoClientURI uri = new MongoClientURI("mongodb://localhost:27017");
+        System.setProperty("java.net.preferIPv4Stack", "true");
+        MongoClientURI uri = new MongoClientURI("mongodb+srv://alexandrefett:fvrAqxTY4IIiPtSO@everest-2ne3f.mongodb.net");
+        //MongoClientURI uri = new MongoClientURI("mongodb://localhost:27017");
         MongoClient mongoClient = new MongoClient(uri);
         MongoDatabase database = mongoClient.getDatabase("instamanager");
-            return database;
+        return database;
     }
-
-
 }
 
