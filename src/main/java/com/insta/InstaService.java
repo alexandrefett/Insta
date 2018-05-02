@@ -75,7 +75,7 @@ public class InstaService {
                         if(i==39){
                             System.out.println("Paused for 20min.");
                             i = 0;
-                            sleep(1000 * 60 * 20);
+                            sleep(1000 * 60 * 30);
                         }
                     }
                 }
