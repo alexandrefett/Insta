@@ -62,14 +62,13 @@ public class InstaService {
             public void run() {
                 try {
                     int i = 0;
-                    final List<Account> f =  followers(id, 10);
+                    final List<Account> f =  followers(id, 20);
                     setF(f);
                     for (Account a:fol) {
-                        System.out.print("i="+i+"username: "+a.getUsername());
                         if(!a.getRequestedByViewer() && !a.getFollowedByViewer()){
                             i++;
+                            System.out.println("i="+i+"  username: "+a.getUsername());
                             instagram.followAccount(a.getId());
-                            System.out.println("  OK");
                             addRequestedAccount(a);
                             sleep(5000);
                         }
@@ -81,10 +80,10 @@ public class InstaService {
                     }
                 }
                 catch(IOException e){
-                    System.out.println("  OK");
+                    System.out.println("  IOException");
                     e.printStackTrace();
                 } catch (InterruptedException e) {
-                    System.out.println("  OK");
+                    System.out.println("  InterruptException");
                     e.printStackTrace();
                 }
             }
@@ -225,7 +224,7 @@ public class InstaService {
             OkHttpClient httpClient = new OkHttpClient.Builder()
                     .addNetworkInterceptor(loggingInterceptor)
                     .addInterceptor(new UserAgentInterceptor(UserAgents.WIN10_CHROME))
-                    .addInterceptor(new ErrorInterceptor())
+                    .addInterceptor(new com.fett.interceptor.ErrorInterceptor())
                     .cookieJar(new DefaultCookieJar(new CookieHashSet()))
                     .build();
             this.instagram = new Instagram(httpClient);

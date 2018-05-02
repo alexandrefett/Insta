@@ -2,6 +2,7 @@ package com.insta;
 
 import com.fett.mapper.Mapper2;
 import com.fett.mapper.ModelMapper2;
+import com.fett.model.MessageResult;
 import com.fett.request.GetFollowersRequest;
 import com.fett.request.GetFollowsRequest;
 import com.google.gson.Gson;
@@ -71,7 +72,6 @@ public class Instagram implements AuthenticatedInsta {
     }
 
     private void getRhxGis(Response response) throws IOException {
-
         Pattern p = Pattern.compile("\"rhx_gis\":\"([a-f0-9]{32})\"");
         Matcher m = p.matcher(response.body().string());
         if (m.find()) {

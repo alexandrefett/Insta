@@ -1,6 +1,5 @@
 package com.fett.mapper;
 
-import com.fett.model.FollowResult;
 import com.fett.model.Search;
 import me.postaddict.instagram.scraper.mapper.ModelMapper;
 import java.io.InputStream;
