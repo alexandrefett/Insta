@@ -45,6 +45,7 @@ public class InstaService {
         if(instagram==null)
             return new StandardResponse(StatusResponse.ERROR, "Do login first");
         try {
+            System.out.println("--------1");
             return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(instagram.getAccountByUsername(username)));
         }
         catch(IOException e){
@@ -75,7 +76,7 @@ public class InstaService {
                         if(i==39){
                             System.out.println("Paused for 20min.");
                             i = 0;
-                            sleep(1000 * 60 * 30);
+                            sleep(1000 * 60 * 45);
                         }
                     }
                 }
@@ -231,7 +232,7 @@ public class InstaService {
             this.instagram.basePage();
             this.instagram.login(name, password);
             this.instagram.basePage();
-            return new StandardResponse(StatusResponse.SUCCESS, "OK");
+            return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(instagram.getAccountByUsername(name)));
         }
         catch(IOException e){
             e.printStackTrace();

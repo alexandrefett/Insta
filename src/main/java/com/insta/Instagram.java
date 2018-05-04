@@ -2,7 +2,6 @@ package com.insta;
 
 import com.fett.mapper.Mapper2;
 import com.fett.mapper.ModelMapper2;
-import com.fett.model.MessageResult;
 import com.fett.request.GetFollowersRequest;
 import com.fett.request.GetFollowsRequest;
 import com.google.gson.Gson;
@@ -124,8 +123,9 @@ public class Instagram implements AuthenticatedInsta {
         }
         String v = String.join(":", rhxgis, "/"+variables+"/");
         m.update(v.getBytes(),0,v.length());
-        System.out.println("MD5: "+new BigInteger(1,m.digest()).toString(16));
-        return new BigInteger(1,m.digest()).toString(16);
+        String md5 = new BigInteger(1,m.digest()).toString(16);
+        System.out.println("MD5: "+md5);
+        return md5;
     }
 
     public Account getAccountByUsername(String username) throws IOException {
@@ -134,12 +134,18 @@ public class Instagram implements AuthenticatedInsta {
                 .addHeader(Endpoint.REFERER, Endpoint.BASE_URL + "/"+username+ "/")
                 .addHeader(Endpoint.X_INSTAGRAM_GIS, genMD5(this.rhxgis, username))
                 .addHeader("X-Requested-with", "XMLHttpRequest")
-                .addHeader("Accept-encoding", "gzip, deflate, br")
+//                .addHeader("Accept-encoding", "gzip, deflate, br")
                 .build();
         Response response = executeHttpRequest(request);
+//        String jsonStream = response.body().string();
+//        Gson gson = new Gson();
+//        AccountG s =  gson.fromJson(jsonStream, AccountG.class);
+
+
         try(InputStream jsonStream = response.body().byteStream()) {
             return mapper.mapAccount(jsonStream);
         }
+        //return s.getGraphql().getAccount();
     }
 
     public Search getSearchUserByUsername(String username) throws IOException {

@@ -32,8 +32,8 @@ public class InstaResource {
             return instaService.requested(req);
         }, new JsonTransformer());
 
-        get(API_CONTEXT + "/users/id/:id", "application/json", (request, response)
-                -> instaService.find(request.params(":id")), new JsonTransformer());
+        get(API_CONTEXT + "/users/username/:username", "application/json", (request, response)
+                -> instaService.find(request.params(":username")), new JsonTransformer());
 
         get(API_CONTEXT + "/status", "application/json", (request, response)
                 -> instaService.status(), new JsonTransformer());
