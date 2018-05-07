@@ -32,7 +32,11 @@ public class InstaResource {
             return instaService.requested(req);
         }, new JsonTransformer());
 
-        get(API_CONTEXT + "/users/username/:username", "application/json", (request, response)
+        get(API_CONTEXT + "/whitelist/:userlist/:username", (req, res) -> {
+            return instaService.addwhitelist(req.params(":userlist"),req.params(":username"));
+        }, new JsonTransformer());
+
+        get(API_CONTEXT + "/users/:username", "application/json", (request, response)
                 -> instaService.find(request.params(":username")), new JsonTransformer());
 
         get(API_CONTEXT + "/status", "application/json", (request, response)
@@ -44,7 +48,7 @@ public class InstaResource {
         get(API_CONTEXT + "/unfollow", "application/json", (request, response)
                 -> new Gson().toJson(instaService.doUnFollow()), new JsonTransformer());
 
-        get(API_CONTEXT + "/search/id/:username", "application/json", (request, response)
+        get(API_CONTEXT + "/search/:username", "application/json", (request, response)
                 -> instaService.getSearchUser(request.params(":username")), new JsonTransformer());
 
 

@@ -1,6 +1,11 @@
 package com.insta;
 
+import com.google.api.core.ApiFuture;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.WriteResult;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.insta.Response.StandardResponse;
 import com.insta.Response.StatusResponse;
 import com.mongodb.client.MongoCollection;
@@ -17,35 +22,78 @@ import okhttp3.logging.HttpLoggingInterceptor;
 import org.bson.Document;
 import spark.Request;
 import java.io.*;
+import java.lang.reflect.Type;
 import java.net.URLDecoder;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ExecutionException;
 
 public class InstaService {
     private final MongoDatabase db;
     private final MongoCollection<Document> requested;
+    private final Firestore fs;
     private Instagram instagram;
     private Account account;
     private List<Account> fol;
     private List<String> whitelist;
 
-    public InstaService(MongoDatabase db) {
+    public InstaService(MongoDatabase db, Firestore fs) {
         this.db = db;
+        this.fs = fs;
         this.requested = db.getCollection("requested");
         this.whitelist = whitelist();
     }
 
-    public void setF(List<Account> f){
-        this.fol = f;
+
+    public StandardResponse addwhitelist(String userlist, String username){
+        if(instagram==null)
+            return new StandardResponse(StatusResponse.ERROR, "Do login first");
+        return adduserdb(userlist, username, "whitelist");
+    }
+
+
+    public StandardResponse addrequested(String userlist, String username){
+        if(instagram==null)
+            return new StandardResponse(StatusResponse.ERROR, "Do login first");
+        return adduserdb(userlist, username, "requested");
+    }
+
+    private  StandardResponse adduserdb(String userlist, String username, String list){
+        try {
+            instagram.basePage();
+            Account a = instagram.getAccountByUsername(userlist);
+            Account b = instagram.getAccountByUsername(username);;
+
+            DocumentReference doc = fs.collection("users").document(String.valueOf(a.getId()));
+
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", b.getId());
+            map.put("username", b.getUsername());
+            map.put("fullName", b.getFullName());
+            map.put("followedByViewer", b.getFollowedByViewer());
+            map.put("requestedByViewer", b.getRequestedByViewer());
+            map.put("profilePictureUrl", b.getProfilePicUrl());
+            map.put("biography", b.getBiography());
+            map.put("follows", b.getFollows());
+            map.put("followsViewer", b.getFollowsViewer());
+            map.put("hasRequestedViewer", b.getHasRequestedViewer());
+            map.put("isPrivate", b.getIsPrivate());
+            map.put("isVerified", b.getIsVerified());
+
+            ApiFuture<WriteResult> result = doc.collection(list).document(String.valueOf(b.getUsername())).set(map);
+            return new StandardResponse(StatusResponse.SUCCESS, "OK");
+        }
+        catch (IOException e){
+            e.printStackTrace();
+            return new StandardResponse(StatusResponse.ERROR, e.getMessage());
+        }
+
     }
 
     public StandardResponse find(String username){
         if(instagram==null)
             return new StandardResponse(StatusResponse.ERROR, "Do login first");
         try {
-            System.out.println("--------1");
             return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(instagram.getAccountByUsername(username)));
         }
         catch(IOException e){
@@ -64,7 +112,6 @@ public class InstaService {
                 try {
                     int i = 0;
                     final List<Account> f =  followers(id, 20);
-                    setF(f);
                     for (Account a:fol) {
                         if(!a.getRequestedByViewer() && !a.getFollowedByViewer()){
                             i++;
@@ -76,13 +123,17 @@ public class InstaService {
                         if(i==39){
                             System.out.println("Paused for 20min.");
                             i = 0;
-                            sleep(1000 * 60 * 45);
+                            sleep(1000 * 60 * 60);
                         }
                     }
                 }
                 catch(IOException e){
                     System.out.println("  IOException");
-                    e.printStackTrace();
+                    try {
+                        Thread.sleep(1000 * 60 * 60);
+                    } catch (InterruptedException e1) {
+                        e1.printStackTrace();
+                    }
                 } catch (InterruptedException e) {
                     System.out.println("  InterruptException");
                     e.printStackTrace();
