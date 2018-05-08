@@ -17,54 +17,69 @@ import me.postaddict.instagram.scraper.interceptor.ErrorInterceptor;
 import me.postaddict.instagram.scraper.interceptor.UserAgentInterceptor;
 import me.postaddict.instagram.scraper.interceptor.UserAgents;
 import me.postaddict.instagram.scraper.model.Account;
-import okhttp3.OkHttpClient;
+import okhttp3.*;
+import okhttp3.internal.InternalCache;
+import okhttp3.internal.tls.OkHostnameVerifier;
+import okhttp3.internal.tls.TrustRootIndex;
 import okhttp3.logging.HttpLoggingInterceptor;
 import org.bson.Document;
 import spark.Request;
+
+import javax.net.SocketFactory;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSocketFactory;
 import java.io.*;
 import java.lang.reflect.Type;
+import java.net.Proxy;
+import java.net.ProxySelector;
 import java.net.URLDecoder;
 import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 public class InstaService {
-    private final MongoDatabase db;
-    private final MongoCollection<Document> requested;
-    private final Firestore fs;
+    private final Firestore firestore;
     private Instagram instagram;
     private Account account;
+    private String username;
+    private String password;
     private List<Account> fol;
     private List<String> whitelist;
+    private DocumentReference dbref;
 
-    public InstaService(MongoDatabase db, Firestore fs) {
-        this.db = db;
-        this.fs = fs;
-        this.requested = db.getCollection("requested");
-        this.whitelist = whitelist();
+
+    public InstaService(InstaService.Builder builder){
+        this.firestore = builder.firestore;
+        this.username = builder.username;
+        this.password = builder.password;
+        HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
+        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.NONE);
+        OkHttpClient httpClient = new OkHttpClient.Builder()
+                .addNetworkInterceptor(loggingInterceptor)
+                .addInterceptor(new UserAgentInterceptor(UserAgents.WIN10_CHROME))
+                .addInterceptor(new com.fett.interceptor.ErrorInterceptor())
+                .cookieJar(new DefaultCookieJar(new CookieHashSet()))
+                .build();
+        this.instagram = new Instagram(httpClient);
     }
-
 
     public StandardResponse addwhitelist(String userlist, String username){
         if(instagram==null)
             return new StandardResponse(StatusResponse.ERROR, "Do login first");
-        return adduserdb(userlist, username, "whitelist");
+        return addtolist(username, "whitelist");
     }
 
 
-    public StandardResponse addrequested(String userlist, String username){
+    public StandardResponse addrequested(String username){
         if(instagram==null)
             return new StandardResponse(StatusResponse.ERROR, "Do login first");
-        return adduserdb(userlist, username, "requested");
+        return addtolist(username, "requested");
     }
 
-    private  StandardResponse adduserdb(String userlist, String username, String list){
+    private  StandardResponse addtolist(String username, String list){
         try {
             instagram.basePage();
-            Account a = instagram.getAccountByUsername(userlist);
             Account b = instagram.getAccountByUsername(username);;
-
-            DocumentReference doc = fs.collection("users").document(String.valueOf(a.getId()));
 
             Map<String, Object> map = new HashMap<>();
             map.put("id", b.getId());
@@ -80,7 +95,7 @@ public class InstaService {
             map.put("isPrivate", b.getIsPrivate());
             map.put("isVerified", b.getIsVerified());
 
-            ApiFuture<WriteResult> result = doc.collection(list).document(String.valueOf(b.getUsername())).set(map);
+            ApiFuture<WriteResult> result = dbref.collection(list).document(String.valueOf(b.getUsername())).set(map);
             return new StandardResponse(StatusResponse.SUCCESS, "OK");
         }
         catch (IOException e){
@@ -117,7 +132,6 @@ public class InstaService {
                             i++;
                             System.out.println("i="+i+"  username: "+a.getUsername());
                             instagram.followAccount(a.getId());
-                            addRequestedAccount(a);
                             sleep(5000);
                         }
                         if(i==39){
@@ -230,22 +244,6 @@ public class InstaService {
         } catch (IOException e) {
             return new StandardResponse(StatusResponse.ERROR, e.getMessage());
         }
-
-    }
-
-    public String status(){
-        return "Requested accounts: "+requested.count();
-    }
-
-    private void addRequestedAccount(Account a){
-        Document d = new Document("user", a.getUsername())
-                .append("id", ""+a.getId())
-                .append("fullname", a.getFullName())
-                .append("profilepicurl", a.getProfilePicUrl())
-                .append("requeste_by_viewer", a.getRequestedByViewer())
-                .append("followed_by_viewer", a.getFollowedByViewer())
-                .append("date", ""+Calendar.getInstance().getTimeInMillis());
-        requested.insertOne(d);
     }
 
     public List<Account> followers(String id, int pagecount) throws IOException{
@@ -254,40 +252,51 @@ public class InstaService {
         return instagram.getFollowers(Long.parseLong(id), pagecount).getNodes();
     }
 
-    public String requested(Request body) throws IOException {
-        String r="";
-        MongoCursor<Document> cursor = requested.find().iterator();
+    public StandardResponse login() {
         try {
-            while (cursor.hasNext()) {
-                r +=cursor.next().toJson() +"<BR>";
-            }
-        } finally {
-            cursor.close();
-        }
-        return r;
-    }
-
-    public StandardResponse login(Request body) throws IOException {
-        String name = URLDecoder.decode(body.queryParams("username"),"UTF-8");
-        String password = URLDecoder.decode(body.queryParams("password"),"UTF-8");
-        try{
-            HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-            loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.NONE);
-            OkHttpClient httpClient = new OkHttpClient.Builder()
-                    .addNetworkInterceptor(loggingInterceptor)
-                    .addInterceptor(new UserAgentInterceptor(UserAgents.WIN10_CHROME))
-                    .addInterceptor(new com.fett.interceptor.ErrorInterceptor())
-                    .cookieJar(new DefaultCookieJar(new CookieHashSet()))
-                    .build();
-            this.instagram = new Instagram(httpClient);
             this.instagram.basePage();
-            this.instagram.login(name, password);
+            this.instagram.login(username, password);
             this.instagram.basePage();
-            return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(instagram.getAccountByUsername(name)));
+            this.account = this.instagram.getAccountByUsername(username);
+            this.dbref = firestore.collection("users").document(String.valueOf(account.getId()));
         }
         catch(IOException e){
+            new StandardResponse(StatusResponse.ERROR, e.getMessage());
             e.printStackTrace();
-            return new StandardResponse(StatusResponse.ERROR, e.getMessage());
         }
+        return new StandardResponse(StatusResponse.SUCCESS, "OK");
+    }
+
+    public static final class Builder {
+        String username;
+        String password;
+        Plan plan;
+        Firestore firestore;
+
+        public Builder() {
+            this.username = "";
+            this.password = "";
+        }
+
+        InstaService.Builder setCredentials(String username, String password){
+            this.username = username;
+            this.password = password;
+            return this;
+        }
+
+        InstaService.Builder setPlan(Plan plan){
+            this.plan = plan;
+            return this;
+        }
+
+        InstaService.Builder setFirestore(Firestore firestore){
+            this.firestore = firestore;
+            return this;
+        }
+
+        public InstaService build() {
+            return new InstaService(this);
+        }
+
     }
 }
