@@ -22,32 +22,10 @@ public class Main {
         Logger.getLogger("org").setLevel(Level.OFF);
         Logger.getLogger("akka").setLevel(Level.OFF);
 
-
         try {
-
-            FileInputStream serviceAccount =  new FileInputStream("instamanager-908a3-aab9f9f25fd5.json");
-
-            FirebaseOptions options = new FirebaseOptions.Builder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                    .setDatabaseUrl("https://instamanager-908a3.firebaseio.com")
-                    .build();
-
-            FirebaseApp.initializeApp(options);
-            Firestore db = FirestoreClient.getFirestore();
-
-
-            new InstaResource(new InstaService(mongo(), db));
+            new InstaResource(new InstaManager());
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    private static MongoDatabase mongo() throws Exception {
-        System.setProperty("java.net.preferIPv4Stack", "true");
-        MongoClientURI uri = new MongoClientURI("mongodb+srv://alexandrefett:fvrAqxTY4IIiPtSO@everest-2ne3f.mongodb.net");
-        //MongoClientURI uri = new MongoClientURI("mongodb://localhost:27017");
-        MongoClient mongoClient = new MongoClient(uri);
-        MongoDatabase database = mongoClient.getDatabase("instamanager");
-        return database;
     }
 }

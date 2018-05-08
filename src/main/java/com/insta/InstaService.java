@@ -4,6 +4,7 @@ import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.WriteResult;
+import com.google.firebase.auth.FirebaseAuth;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.insta.Response.StandardResponse;
@@ -43,10 +44,7 @@ public class InstaService {
     private Account account;
     private String username;
     private String password;
-    private List<Account> fol;
-    private List<String> whitelist;
     private DocumentReference dbref;
-
 
     public InstaService(InstaService.Builder builder){
         this.firestore = builder.firestore;
@@ -64,11 +62,20 @@ public class InstaService {
     }
 
     public StandardResponse addwhitelist(String userlist, String username){
-        if(instagram==null)
-            return new StandardResponse(StatusResponse.ERROR, "Do login first");
         return addtolist(username, "whitelist");
     }
 
+    public StandardResponse find(String username){
+        if(instagram==null)
+            return new StandardResponse(StatusResponse.ERROR, "user not logged");
+        try {
+            Account account = instagram.getAccountByUsername(username);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return new StandardResponse(StatusResponse.ERROR, e.getMessage());
+        }
+        return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(account));
+    }
 
     public StandardResponse addrequested(String username){
         if(instagram==null)
@@ -105,37 +112,23 @@ public class InstaService {
 
     }
 
-    public StandardResponse find(String username){
-        if(instagram==null)
-            return new StandardResponse(StatusResponse.ERROR, "Do login first");
-        try {
-            return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(instagram.getAccountByUsername(username)));
-        }
-        catch(IOException e){
-            e.printStackTrace();
-            return new StandardResponse(StatusResponse.ERROR, e.getMessage());
-        }
-    }
-
-    public StandardResponse doFollow(String id){
-        if(instagram==null)
-            return new StandardResponse(StatusResponse.ERROR, "Do login first");
-
+    public StandardResponse follow(String id){
         new Thread() {
             @Override
             public void run() {
                 try {
                     int i = 0;
                     final List<Account> f =  followers(id, 20);
-                    for (Account a:fol) {
+                    for (Account a:f) {
                         if(!a.getRequestedByViewer() && !a.getFollowedByViewer()){
                             i++;
                             System.out.println("i="+i+"  username: "+a.getUsername());
                             instagram.followAccount(a.getId());
+                            addrequested(a.getUsername());
                             sleep(5000);
                         }
                         if(i==39){
-                            System.out.println("Paused for 20min.");
+                            System.out.println("Paused for 1 hour.");
                             i = 0;
                             sleep(1000 * 60 * 60);
                         }
@@ -153,9 +146,10 @@ public class InstaService {
                     e.printStackTrace();
                 }
             }
+
         }.start();
 
-        return new StandardResponse(StatusResponse.SUCCESS, "Thread started");
+        return new StandardResponse(StatusResponse.SUCCESS, "Follow thread started");
     }
 
     public List<String> whitelist(){
@@ -189,13 +183,11 @@ public class InstaService {
         return r;
     }
 
-    public StandardResponse doUnFollow(){
-        if(instagram==null)
-            return new StandardResponse(StatusResponse.ERROR, "Do login first");
-
+    public StandardResponse unfollow(){
         new Thread() {
             @Override
             public void run() {
+                List<String> whitelist = new ArrayList<>();
                 try {
                     int i = 0;
                     List<Account> f = instagram.getFollows(Long.valueOf("3472751680"), 15).getNodes();
@@ -218,9 +210,9 @@ public class InstaService {
                 } catch (UnknownHostException e) {
                     try {
                         System.out.println("UnkonowHostException");
-                        System.out.println("Paused for 1min");
+                        System.out.println("Paused for 1 min");
                         sleep(1000 * 60);
-                        doUnFollow();
+                        unfollow();
                     } catch (InterruptedException e1) {
                         e1.printStackTrace();
                     }
@@ -232,12 +224,12 @@ public class InstaService {
                 }
             }
         }.start();
-        return new StandardResponse(StatusResponse.SUCCESS, "Thread started");
+        return new StandardResponse(StatusResponse.SUCCESS, "Unfollow thread started");
     }
 
-    public StandardResponse getSearchUser(String username){
+    public StandardResponse search(String username){
         if(instagram==null)
-            return new StandardResponse(StatusResponse.ERROR, "Do login first");
+            return new StandardResponse(StatusResponse.ERROR, "user not logged");
 
         try {
             return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(instagram.getSearchUserByUsername(username)));

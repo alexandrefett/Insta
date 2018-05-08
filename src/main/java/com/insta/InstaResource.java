@@ -10,10 +10,10 @@ import static spark.Spark.put;
 public class InstaResource {
     private static final String API_CONTEXT = "/api/v1";
 
-    private final InstaService instaService;
+    private final InstaManager services;
 
-    public InstaResource(InstaService instaService) {
-        this.instaService = instaService;
+    public InstaResource(InstaManager services) {
+        this.services = services;
         setupEndpoints();
     }
 
@@ -21,35 +21,40 @@ public class InstaResource {
         get("/hello", (req, res) -> "Hello World");
 
         get(API_CONTEXT + "/login", (req, res) -> {
-            return instaService.login(req);
+            return services.login(req);
         }, new JsonTransformer());
 
-        get(API_CONTEXT + "/followers", (req, res) -> {
-            return instaService.login(req);
+        get(API_CONTEXT + "/users/:username/followers", (req, res) -> {
+            return services.followers(req);
+        }, new JsonTransformer());
+
+        get(API_CONTEXT + "/users/:username/follows", (req, res) -> {
+            return services.follows(req);
         }, new JsonTransformer());
 
         get(API_CONTEXT + "/requested", (req, res) -> {
-            return instaService.requested(req);
+            return services.requested(req);
         }, new JsonTransformer());
 
         get(API_CONTEXT + "/whitelist/:userlist/:username", (req, res) -> {
-            return instaService.addwhitelist(req.params(":userlist"),req.params(":username"));
+            return services.addwhitelist(req);
+//            return services.addwhitelist(req.params(":userlist"),req.params(":username"));
         }, new JsonTransformer());
 
         get(API_CONTEXT + "/users/:username", "application/json", (request, response)
-                -> instaService.find(request.params(":username")), new JsonTransformer());
+                -> services.find(req), new JsonTransformer());
+//                -> services.find(request.params(":username")), new JsonTransformer());
 
-        get(API_CONTEXT + "/status", "application/json", (request, response)
-                -> instaService.status(), new JsonTransformer());
-
-        get(API_CONTEXT + "/follow/id/:id", "application/json", (request, response)
-                -> instaService.doFollow(request.params(":id")), new JsonTransformer());
+        get(API_CONTEXT + "/users/:username/follow", "application/json", (request, response)
+                -> services.follow(req), new JsonTransformer());
+//                -> services.follow(request.params(":id")), new JsonTransformer());
 
         get(API_CONTEXT + "/unfollow", "application/json", (request, response)
-                -> new Gson().toJson(instaService.doUnFollow()), new JsonTransformer());
+                -> services.unfollow(req), new JsonTransformer());
 
         get(API_CONTEXT + "/search/:username", "application/json", (request, response)
-                -> instaService.getSearchUser(request.params(":username")), new JsonTransformer());
+                -> services.search(req), new JsonTransformer());
+//                -> services.search(request.params(":username")), new JsonTransformer());
 
 
 
