@@ -24,11 +24,11 @@ public class InstaResource {
             return services.login(req);
         }, new JsonTransformer());
 
-        get(API_CONTEXT + "/users/:username/followers", (req, res) -> {
+        get(API_CONTEXT + "/users/followers", (req, res) -> {
             return services.followers(req);
         }, new JsonTransformer());
 
-        get(API_CONTEXT + "/users/:username/follows", (req, res) -> {
+        get(API_CONTEXT + "/users/follows", (req, res) -> {
             return services.follows(req);
         }, new JsonTransformer());
 
@@ -36,25 +36,23 @@ public class InstaResource {
             return services.requested(req);
         }, new JsonTransformer());
 
-        get(API_CONTEXT + "/whitelist/:userlist/:username", (req, res) -> {
+        get(API_CONTEXT + "/whitelist/:username", (req, res) -> {
             return services.addwhitelist(req);
 //            return services.addwhitelist(req.params(":userlist"),req.params(":username"));
         }, new JsonTransformer());
 
-        get(API_CONTEXT + "/users/:username", "application/json", (request, response)
+        get(API_CONTEXT + "/users/:username", "application/json", (req, res)
                 -> services.find(req), new JsonTransformer());
 //                -> services.find(request.params(":username")), new JsonTransformer());
 
-        get(API_CONTEXT + "/users/:username/follow", "application/json", (request, response)
+        get(API_CONTEXT + "/users/follow/:username", "application/json", (req, res)
                 -> services.follow(req), new JsonTransformer());
-//                -> services.follow(request.params(":id")), new JsonTransformer());
 
-        get(API_CONTEXT + "/unfollow", "application/json", (request, response)
+        get(API_CONTEXT + "/unfollow", "application/json", (req, res)
                 -> services.unfollow(req), new JsonTransformer());
 
-        get(API_CONTEXT + "/search/:username", "application/json", (request, response)
+        get(API_CONTEXT + "/search/:username", "application/json", (req, res)
                 -> services.search(req), new JsonTransformer());
-//                -> services.search(request.params(":username")), new JsonTransformer());
 
 
 

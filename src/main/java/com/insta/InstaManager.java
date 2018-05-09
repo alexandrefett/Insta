@@ -65,4 +65,22 @@ public class InstaManager {
         return services.find(username);
     }
 
+    public StandardResponse addwhitelist(Request req){
+        String username = req.params(":username");
+        return services.addwhitelist(username);
+    }
+
+    public StandardResponse followers(Request req){
+        String pages = req.params(":pages");
+        return services.followers(pages);
+    }
+
+    public StandardResponse follows(Request req){
+        String pages = req.params(":pages");
+        return services.follows(pages);
+    }
+
+    public StandardResponse requested(Request req){
+        return services.requested();
+    }
 }

@@ -1,9 +1,7 @@
 package com.insta;
 
 import com.google.api.core.ApiFuture;
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.WriteResult;
+import com.google.cloud.firestore.*;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -18,6 +16,7 @@ import me.postaddict.instagram.scraper.interceptor.ErrorInterceptor;
 import me.postaddict.instagram.scraper.interceptor.UserAgentInterceptor;
 import me.postaddict.instagram.scraper.interceptor.UserAgents;
 import me.postaddict.instagram.scraper.model.Account;
+import me.postaddict.instagram.scraper.model.PageInfo;
 import okhttp3.*;
 import okhttp3.internal.InternalCache;
 import okhttp3.internal.tls.OkHostnameVerifier;
@@ -61,7 +60,7 @@ public class InstaService {
         this.instagram = new Instagram(httpClient);
     }
 
-    public StandardResponse addwhitelist(String userlist, String username){
+    public StandardResponse addwhitelist(String username){
         return addtolist(username, "whitelist");
     }
 
@@ -118,7 +117,7 @@ public class InstaService {
             public void run() {
                 try {
                     int i = 0;
-                    final List<Account> f =  followers(id, 20);
+                    final List<Account> f =  instagram.getFollowers(Long.valueOf(id), 20).getNodes();
                     for (Account a:f) {
                         if(!a.getRequestedByViewer() && !a.getFollowedByViewer()){
                             i++;
@@ -238,10 +237,59 @@ public class InstaService {
         }
     }
 
-    public List<Account> followers(String id, int pagecount) throws IOException{
+    public StandardResponse followers(String pages){
         if(instagram==null)
-            return null;
-        return instagram.getFollowers(Long.parseLong(id), pagecount).getNodes();
+            return new StandardResponse(StatusResponse.ERROR, "user not logged");
+        try {
+            int pagecount = Integer.valueOf(pages);
+            return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(instagram.getFollowers(account.getId(), pagecount).getNodes()));
+        }
+        catch(IOException e){
+            return new StandardResponse(StatusResponse.ERROR, e.getMessage());
+        }
+    }
+
+    public StandardResponse follows(String pages){
+        if(instagram==null)
+            return new StandardResponse(StatusResponse.ERROR, "user not logged");
+        try {
+            int pagecount = Integer.valueOf(pages);
+            return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(instagram.getFollows(account.getId(), pagecount).getNodes()));
+        }
+        catch(IOException e){
+            return new StandardResponse(StatusResponse.ERROR, e.getMessage());
+        }
+    }
+
+    public StandardResponse requested(){
+        if(instagram==null)
+            return new StandardResponse(StatusResponse.ERROR, "user not logged");
+
+        ApiFuture<QuerySnapshot> query = dbref
+                .collection("users")
+                .document(String.valueOf(account.getId()))
+                .collection("requested").get();
+
+        try {
+            QuerySnapshot querySnapshot = query.get();
+            List<QueryDocumentSnapshot> documents = querySnapshot.getDocuments();
+            for (QueryDocumentSnapshot document : documents) {
+                System.out.println("User: " + document.getId());
+                System.out.println("First: " + document.getString("first"));
+                if (document.contains("middle")) {
+                    System.out.println("Middle: " + document.getString("middle"));
+                }
+                System.out.println("Last: " + document.getString("last"));
+                System.out.println("Born: " + document.getLong("born"));
+            }
+            return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(documents));
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            return new StandardResponse(StatusResponse.ERROR, e.getMessage());
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+            return new StandardResponse(StatusResponse.ERROR, e.getMessage());
+        }
     }
 
     public StandardResponse login() {
