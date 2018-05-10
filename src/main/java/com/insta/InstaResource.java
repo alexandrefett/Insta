@@ -1,8 +1,7 @@
 package com.insta;
 
-import com.google.gson.Gson;
-
 import static spark.Spark.get;
+import static spark.Spark.post;
 import static spark.Spark.put;
 
 ;
@@ -24,11 +23,11 @@ public class InstaResource {
             return services.login(req);
         }, new JsonTransformer());
 
-        get(API_CONTEXT + "/users/followers", (req, res) -> {
+        get(API_CONTEXT + "/followers", (req, res) -> {
             return services.followers(req);
         }, new JsonTransformer());
 
-        get(API_CONTEXT + "/users/follows", (req, res) -> {
+        get(API_CONTEXT + "/follows", (req, res) -> {
             return services.follows(req);
         }, new JsonTransformer());
 
@@ -36,16 +35,18 @@ public class InstaResource {
             return services.requested(req);
         }, new JsonTransformer());
 
-        get(API_CONTEXT + "/whitelist/:username", (req, res) -> {
+        post(API_CONTEXT + "/whitelist", (req, res) -> {
             return services.addwhitelist(req);
-//            return services.addwhitelist(req.params(":userlist"),req.params(":username"));
+        }, new JsonTransformer());
+
+        get(API_CONTEXT + "/whitelist", (req, res) -> {
+            return services.getwhitelist(req);
         }, new JsonTransformer());
 
         get(API_CONTEXT + "/users/:username", "application/json", (req, res)
                 -> services.find(req), new JsonTransformer());
-//                -> services.find(request.params(":username")), new JsonTransformer());
 
-        get(API_CONTEXT + "/users/follow/:username", "application/json", (req, res)
+        get(API_CONTEXT + "/follow/:username", "application/json", (req, res)
                 -> services.follow(req), new JsonTransformer());
 
         get(API_CONTEXT + "/unfollow", "application/json", (req, res)
@@ -54,6 +55,8 @@ public class InstaResource {
         get(API_CONTEXT + "/search/:username", "application/json", (req, res)
                 -> services.search(req), new JsonTransformer());
 
+        get(API_CONTEXT + "/register", "application/json", (req, res)
+                -> services.register(req), new JsonTransformer());
 
 
     }

@@ -3,7 +3,10 @@ package com.insta;
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.*;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.UserRecord;
 import com.google.gson.Gson;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
 import com.insta.Response.StandardResponse;
 import com.insta.Response.StatusResponse;
@@ -60,6 +63,10 @@ public class InstaService {
         this.instagram = new Instagram(httpClient);
     }
 
+    public Account getAccount(){
+        return account;
+    }
+
     public StandardResponse addwhitelist(String username){
         return addtolist(username, "whitelist");
     }
@@ -76,17 +83,33 @@ public class InstaService {
         return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(account));
     }
 
-    public StandardResponse addrequested(String username){
+    public StandardResponse addrequested(Account b){
         if(instagram==null)
-            return new StandardResponse(StatusResponse.ERROR, "Do login first");
-        return addtolist(username, "requested");
+            return new StandardResponse(StatusResponse.ERROR, "user not logged");
+        try {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", b.getId());
+            map.put("username", b.getUsername());
+            map.put("fullName", b.getFullName());
+            map.put("followedByViewer", b.getFollowedByViewer());
+            map.put("requestedByViewer", b.getRequestedByViewer());
+            map.put("profilePictureUrl", b.getProfilePicUrl());
+            map.put("followsViewer", b.getFollowsViewer());
+            map.put("isVerified", b.getIsVerified());
+            map.put("date", Calendar.getInstance().getTimeInMillis()*-1);
+
+            ApiFuture<WriteResult> result = dbref.collection("requested").document(String.valueOf(b.getId())).set(map);
+            return new StandardResponse(StatusResponse.SUCCESS, "OK");
+        }
+        catch (Exception e){
+            e.printStackTrace();
+            return new StandardResponse(StatusResponse.ERROR, e.getMessage());
+        }
     }
 
     private  StandardResponse addtolist(String username, String list){
         try {
-            instagram.basePage();
             Account b = instagram.getAccountByUsername(username);;
-
             Map<String, Object> map = new HashMap<>();
             map.put("id", b.getId());
             map.put("username", b.getUsername());
@@ -101,8 +124,8 @@ public class InstaService {
             map.put("isPrivate", b.getIsPrivate());
             map.put("isVerified", b.getIsVerified());
 
-            ApiFuture<WriteResult> result = dbref.collection(list).document(String.valueOf(b.getUsername())).set(map);
-            return new StandardResponse(StatusResponse.SUCCESS, "OK");
+            ApiFuture<WriteResult> result = dbref.collection(list).document(String.valueOf(b.getId())).set(map);
+            return new StandardResponse(StatusResponse.SUCCESS, result.toString());
         }
         catch (IOException e){
             e.printStackTrace();
@@ -123,7 +146,7 @@ public class InstaService {
                             i++;
                             System.out.println("i="+i+"  username: "+a.getUsername());
                             instagram.followAccount(a.getId());
-                            addrequested(a.getUsername());
+                            addrequested(a);
                             sleep(5000);
                         }
                         if(i==39){
@@ -149,37 +172,6 @@ public class InstaService {
         }.start();
 
         return new StandardResponse(StatusResponse.SUCCESS, "Follow thread started");
-    }
-
-    public List<String> whitelist(){
-        ArrayList<String> r  = new ArrayList<String>();
-
-        File f = new File("whitelist.csv");
-        if(f.exists()){
-            BufferedReader br = null;
-            String line = "";
-            try {
-                br = new BufferedReader(new FileReader("whitelist.csv"));
-                String username="";
-                while ((line = br.readLine()) != null) {
-                    r.add(line);
-                }
-
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                if (br != null) {
-                    try {
-                        br.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
-        return r;
     }
 
     public StandardResponse unfollow(){
@@ -261,49 +253,12 @@ public class InstaService {
         }
     }
 
-    public StandardResponse requested(){
-        if(instagram==null)
-            return new StandardResponse(StatusResponse.ERROR, "user not logged");
-
-        ApiFuture<QuerySnapshot> query = dbref
-                .collection("users")
-                .document(String.valueOf(account.getId()))
-                .collection("requested").get();
-
-        try {
-            QuerySnapshot querySnapshot = query.get();
-            List<QueryDocumentSnapshot> documents = querySnapshot.getDocuments();
-            for (QueryDocumentSnapshot document : documents) {
-                System.out.println("User: " + document.getId());
-                System.out.println("First: " + document.getString("first"));
-                if (document.contains("middle")) {
-                    System.out.println("Middle: " + document.getString("middle"));
-                }
-                System.out.println("Last: " + document.getString("last"));
-                System.out.println("Born: " + document.getLong("born"));
-            }
-            return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(documents));
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            return new StandardResponse(StatusResponse.ERROR, e.getMessage());
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-            return new StandardResponse(StatusResponse.ERROR, e.getMessage());
-        }
-    }
-
-    public StandardResponse login() {
-        try {
-            this.instagram.basePage();
-            this.instagram.login(username, password);
-            this.instagram.basePage();
-            this.account = this.instagram.getAccountByUsername(username);
-            this.dbref = firestore.collection("users").document(String.valueOf(account.getId()));
-        }
-        catch(IOException e){
-            new StandardResponse(StatusResponse.ERROR, e.getMessage());
-            e.printStackTrace();
-        }
+    public StandardResponse login() throws IOException{
+        this.instagram.basePage();
+        this.instagram.login(username, password);
+        this.instagram.basePage();
+        this.account = this.instagram.getAccountByUsername(username);
+        this.dbref = firestore.collection("users").document(String.valueOf(account.getId()));
         return new StandardResponse(StatusResponse.SUCCESS, "OK");
     }
 
@@ -319,6 +274,8 @@ public class InstaService {
         }
 
         InstaService.Builder setCredentials(String username, String password){
+            System.out.println(""+username);
+            System.out.println(""+password);
             this.username = username;
             this.password = password;
             return this;
