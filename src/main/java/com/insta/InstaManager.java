@@ -1,6 +1,6 @@
 package com.insta;
 
-import com.fett.model.User;
+import com.fett.model.InstaUser;
 import com.google.api.core.ApiFuture;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.firestore.*;
@@ -12,10 +12,8 @@ import com.google.firebase.cloud.FirestoreClient;
 import com.google.gson.Gson;
 import com.insta.Response.StandardResponse;
 import com.insta.Response.StatusResponse;
-import me.postaddict.instagram.scraper.model.Account;
-import org.mongodb.morphia.query.QueryException;
+import com.insta.model.User;
 import spark.Request;
-import spark.utils.StringUtils;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -134,10 +132,10 @@ public class InstaManager {
 
             QuerySnapshot querySnapshot = query.get();
             List<QueryDocumentSnapshot> documents = querySnapshot.getDocuments();
-            List<User> accounts = new ArrayList<>();
-            User a;
+            List<InstaUser> accounts = new ArrayList<>();
+            InstaUser a;
             for (QueryDocumentSnapshot q:documents) {
-                a = q.toObject(User.class);
+                a = q.toObject(InstaUser.class);
                 accounts.add(a);
             }
             return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(accounts));        }
@@ -159,6 +157,8 @@ public class InstaManager {
         String name = req.queryParams("name");
         String email = req.queryParams("email");
         String password = req.queryParams("password");
+        String instagram = req.queryParams("instagram");
+        String instaPassword = req.queryParams("instaPassword");
 
         UserRecord.CreateRequest request = new UserRecord.CreateRequest()
                 .setEmail(email)
@@ -170,6 +170,11 @@ public class InstaManager {
         UserRecord userRecord = null;
         try {
             userRecord = FirebaseAuth.getInstance().createUserAsync(request).get();
+            User u = new User();
+            u.setId(userRecord.getUid());
+            u.setInstagram(instagram);
+            u.setInstaPassword(instaPassword);
+            ApiFuture<WriteResult> result = saveUser(u);
             return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(userRecord));
 
         } catch (InterruptedException e) {
@@ -179,5 +184,10 @@ public class InstaManager {
             e.printStackTrace();
             return new StandardResponse(StatusResponse.ERROR, e.getMessage());
         }
+    }
+
+    private ApiFuture<WriteResult> saveUser(User user) throws ExecutionException, InterruptedException{
+        ApiFuture<WriteResult> result = db.collection("register").document(user.getId()).set(user.toMap());
+        return result;
     }
 }

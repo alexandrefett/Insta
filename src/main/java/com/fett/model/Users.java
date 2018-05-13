@@ -2,7 +2,6 @@ package com.fett.model;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
-import me.postaddict.instagram.scraper.model.Account;
 
 public class Users {
 
@@ -11,7 +10,7 @@ public class Users {
     private Integer position;
     @SerializedName("user")
     @Expose
-    private User user;
+    private InstaUser user;
 
     public Integer getPosition() {
         return position;
@@ -21,11 +20,11 @@ public class Users {
         this.position = position;
     }
 
-    public User getUser() {
+    public InstaUser getUser() {
         return user;
     }
 
-    public void setUser(User user) {
+    public void setUser(InstaUser user) {
         this.user = user;
     }
 

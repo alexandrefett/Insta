@@ -4,7 +4,7 @@ package com.fett.model;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
-public class User {
+public class InstaUser {
     @SerializedName("followedByViewer")
     @Expose
     Boolean followedByViewer;
@@ -38,7 +38,7 @@ public class User {
 
 
 
-    public User(){
+    public InstaUser(){
     }
 
     public Boolean getFollowedByViewer() {
