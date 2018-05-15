@@ -154,40 +154,37 @@ public class InstaManager {
     }
 
     public StandardResponse register(Request req){
-        String name = req.queryParams("name");
-        String email = req.queryParams("email");
-        String password = req.queryParams("password");
-        String instagram = req.queryParams("instagram");
-        String instaPassword = req.queryParams("instaPassword");
+        User user = new Gson().fromJson(req.body(), User.class);
+        ApiFuture<WriteResult> result = db.collection("instagram").document(user.getUid()).set(user.toMap());
+        return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(result));
+    }
 
-        UserRecord.CreateRequest request = new UserRecord.CreateRequest()
-                .setEmail(email)
-                .setEmailVerified(false)
-                .setPassword(password)
-                .setDisplayName(name)
-                .setDisabled(false);
-
-        UserRecord userRecord = null;
+    public StandardResponse getinstagram(Request req){
         try {
-            userRecord = FirebaseAuth.getInstance().createUserAsync(request).get();
-            User u = new User();
-            u.setId(userRecord.getUid());
-            u.setInstagram(instagram);
-            u.setInstaPassword(instaPassword);
-            ApiFuture<WriteResult> result = saveUser(u);
-            return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(userRecord));
+            String uid = req.queryParams("uid"); // is date
 
-        } catch (InterruptedException e) {
+            DocumentReference docRef = db.collection("instagram").document(uid);
+            ApiFuture<DocumentSnapshot> future = docRef.get();
+            DocumentSnapshot document = future.get();
+            User user = null;
+            if (document.exists()) {
+                user = document.toObject(User.class);
+                System.out.println(user);
+            }
+            return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(user));
+        }
+        catch(InterruptedException e){
             e.printStackTrace();
             return new StandardResponse(StatusResponse.ERROR, e.getMessage());
-        } catch (ExecutionException e) {
+        }
+        catch(ExecutionException e){
+            e.printStackTrace();
+            return new StandardResponse(StatusResponse.ERROR, e.getMessage());
+        }
+        catch(Exception e){
             e.printStackTrace();
             return new StandardResponse(StatusResponse.ERROR, e.getMessage());
         }
     }
 
-    private ApiFuture<WriteResult> saveUser(User user) throws ExecutionException, InterruptedException{
-        ApiFuture<WriteResult> result = db.collection("register").document(user.getId()).set(user.toMap());
-        return result;
-    }
 }

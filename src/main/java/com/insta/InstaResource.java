@@ -56,8 +56,10 @@ public class InstaResource {
                 -> services.search(req), new JsonTransformer());
 
         get(API_CONTEXT + "/register", "application/json", (req, res)
-                -> services.register(req), new JsonTransformer());
+                -> services.getinstagram(req), new JsonTransformer());
 
+        post(API_CONTEXT + "/register", "application/json", (req, res)
+                -> services.register(req), new JsonTransformer());
 
     }
 

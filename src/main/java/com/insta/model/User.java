@@ -5,19 +5,19 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class User {
-    private String id;
+    private String uid;
     private String instagram;
     private String instaPassword;
 
     public User() {
     }
 
-    public String getId() {
-        return id;
+    public String getUid() {
+        return uid;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public void setUid(String id) {
+        this.uid = uid;
     }
 
     public String getInstagram() {
@@ -38,7 +38,7 @@ public class User {
 
     public Map toMap(){
         Map<String, Object> map = new HashMap<>();
-        map.put("id", id);
+        map.put("uid", uid);
         map.put("instagram", instagram);
         map.put("fullName", instaPassword);
 
