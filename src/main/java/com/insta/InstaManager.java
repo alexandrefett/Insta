@@ -6,15 +6,13 @@ import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.firestore.*;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.UserRecord;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.gson.Gson;
 import com.insta.Response.StandardResponse;
 import com.insta.Response.StatusResponse;
 import com.insta.model.User;
+import me.postaddict.instagram.scraper.model.Account;
 import spark.Request;
-
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
@@ -22,17 +20,17 @@ import java.util.concurrent.ExecutionException;
 
 public class InstaManager {
 
-    private InstaService services;
     private Firestore db;
+    private Map<String, InstaService> usersMap;
 
     public InstaManager(){
         try {
+            usersMap = new HashMap<String, InstaService>();
             FileInputStream serviceAccount = new FileInputStream("instamanager-908a3-aab9f9f25fd5.json");
             FirebaseOptions options = new FirebaseOptions.Builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                     .setDatabaseUrl("https://instamanager-908a3.firebaseio.com")
                     .build();
-
             FirebaseApp.initializeApp(options);
             db = FirestoreClient.getFirestore();
         }
@@ -42,17 +40,19 @@ public class InstaManager {
     }
 
     public StandardResponse login(Request req){
-        String username = req.queryParams("username");
-        String password = req.queryParams("password");
+        String token = req.queryParams("token");
 
         try {
-                services = new InstaService.Builder()
-                    .setCredentials(username, password)
-                    .setFirestore(db)
-                    .setPlan(Plan.TOP)
-                    .build();
-
-            return services.login();
+            services = new InstaService.Builder()
+                .setCredentials(token)
+                .setFirestore(db)
+                .setPlan(Plan.TOP)
+                .build();
+            Account account = services.login();
+            if(account == null)
+                return new StandardResponse(StatusResponse.ERROR, "login fail");
+            else
+                return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(account));
         }
         catch(IOException e){
             return new StandardResponse(StatusResponse.ERROR, e.getMessage());
@@ -81,7 +81,6 @@ public class InstaManager {
     public StandardResponse getwhitelist(Request req){
         String apikey = req.queryParams("apikey");
 
-
         ApiFuture<QuerySnapshot> query = db.collection("users")
                 .document("abc")
                 .collection("whitelist").get();
@@ -107,7 +106,7 @@ public class InstaManager {
     }
 
     public StandardResponse followers(Request req){
-        String pages = req.params(":pages");
+        String pages = req.queryParams("pages");
         return services.followers(pages);
     }
 
@@ -155,8 +154,17 @@ public class InstaManager {
 
     public StandardResponse register(Request req){
         User user = new Gson().fromJson(req.body(), User.class);
-        ApiFuture<WriteResult> result = db.collection("instagram").document(user.getUid()).set(user.toMap());
-        return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(result));
+        ApiFuture<WriteResult> result = db.collection("profile").document(user.getUid()).set(user.toMap());
+        try {
+            System.out.println("WriteResult:" + result.get().toString());
+            return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(result.get()));
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            return new StandardResponse(StatusResponse.ERROR, e.getMessage());
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+            return new StandardResponse(StatusResponse.ERROR, e.getMessage());
+        }
     }
 
     public StandardResponse getinstagram(Request req){
@@ -186,5 +194,4 @@ public class InstaManager {
             return new StandardResponse(StatusResponse.ERROR, e.getMessage());
         }
     }
-
 }

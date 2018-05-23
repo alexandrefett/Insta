@@ -7,7 +7,7 @@ import java.util.Map;
 public class User {
     private String uid;
     private String instagram;
-    private String instaPassword;
+    private String instapass;
 
     public User() {
     }
@@ -28,19 +28,19 @@ public class User {
         this.instagram = instagram;
     }
 
-    public String getInstaPassword() {
-        return instaPassword;
+    public String getInstapass() {
+        return instapass;
     }
 
-    public void setInstaPassword(String instaPassword) {
-        this.instaPassword = instaPassword;
+    public void setInstapass(String instapass) {
+        this.instapass = instapass;
     }
 
     public Map toMap(){
         Map<String, Object> map = new HashMap<>();
         map.put("uid", uid);
         map.put("instagram", instagram);
-        map.put("fullName", instaPassword);
+        map.put("instapass", instapass);
 
         return map;
     }

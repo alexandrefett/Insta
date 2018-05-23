@@ -10,6 +10,7 @@ import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
 import com.insta.Response.StandardResponse;
 import com.insta.Response.StatusResponse;
+import com.insta.model.User;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
@@ -44,14 +45,13 @@ public class InstaService {
     private final Firestore firestore;
     private Instagram instagram;
     private Account account;
-    private String username;
-    private String password;
+    private User user;
+    private String token;
     private DocumentReference dbref;
 
     public InstaService(InstaService.Builder builder){
         this.firestore = builder.firestore;
-        this.username = builder.username;
-        this.password = builder.password;
+        this.token = builder.token;
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
         loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.NONE);
         OkHttpClient httpClient = new OkHttpClient.Builder()
@@ -61,6 +61,28 @@ public class InstaService {
                 .cookieJar(new DefaultCookieJar(new CookieHashSet()))
                 .build();
         this.instagram = new Instagram(httpClient);
+        this.user = _getUserFireAccount(token);
+    }
+
+    private User _getUserFireAccount(String token){
+        User user = null;
+        try{
+            DocumentReference docRef = dbref.collection("profile").document(token);
+            ApiFuture<DocumentSnapshot> future = docRef.get();
+            DocumentSnapshot document = future.get();
+            if (document.exists()) {
+                user = document.toObject(User.class);
+                user.setUid(document.getId());
+                return user;
+            }
+        }
+        catch(InterruptedException e){
+            e.printStackTrace();
+        }
+        catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public Account getAccount(){
@@ -68,6 +90,10 @@ public class InstaService {
     }
 
     public StandardResponse addwhitelist(String username){
+        return addtolist(username, "whitelist");
+    }
+
+    public StandardResponse addtofollow(String username){
         return addtolist(username, "whitelist");
     }
 
@@ -117,12 +143,9 @@ public class InstaService {
             map.put("followedByViewer", b.getFollowedByViewer());
             map.put("requestedByViewer", b.getRequestedByViewer());
             map.put("profilePictureUrl", b.getProfilePicUrl());
-            map.put("biography", b.getBiography());
-            map.put("follows", b.getFollows());
             map.put("followsViewer", b.getFollowsViewer());
-            map.put("hasRequestedViewer", b.getHasRequestedViewer());
-            map.put("isPrivate", b.getIsPrivate());
             map.put("isVerified", b.getIsVerified());
+            map.put("date", Calendar.getInstance().getTimeInMillis()*-1);
 
             ApiFuture<WriteResult> result = dbref.collection(list).document(String.valueOf(b.getId())).set(map);
             return new StandardResponse(StatusResponse.SUCCESS, result.toString());
@@ -253,31 +276,25 @@ public class InstaService {
         }
     }
 
-    public StandardResponse login() throws IOException{
+    public Account login() throws IOException{
         this.instagram.basePage();
-        this.instagram.login(username, password);
+        this.instagram.login(user.getInstagram(), user.getInstapass());
         this.instagram.basePage();
-        this.account = this.instagram.getAccountByUsername(username);
+        this.account = this.instagram.getAccountByUsername(user.getInstagram());
         this.dbref = firestore.collection("users").document(String.valueOf(account.getId()));
-        return new StandardResponse(StatusResponse.SUCCESS, "OK");
+        return account;
     }
 
     public static final class Builder {
-        String username;
-        String password;
         Plan plan;
         Firestore firestore;
+        String token;
 
         public Builder() {
-            this.username = "";
-            this.password = "";
         }
 
-        InstaService.Builder setCredentials(String username, String password){
-            System.out.println(""+username);
-            System.out.println(""+password);
-            this.username = username;
-            this.password = password;
+        InstaService.Builder setCredentials(String token){
+            this.token = token;
             return this;
         }
 

@@ -134,18 +134,13 @@ public class Instagram implements AuthenticatedInsta {
                 .addHeader(Endpoint.REFERER, Endpoint.BASE_URL + "/"+username+ "/")
                 .addHeader(Endpoint.X_INSTAGRAM_GIS, genMD5(this.rhxgis, username))
                 .addHeader("X-Requested-with", "XMLHttpRequest")
-//                .addHeader("Accept-encoding", "gzip, deflate, br")
                 .build();
         Response response = executeHttpRequest(request);
-//        String jsonStream = response.body().string();
-//        Gson gson = new Gson();
-//        AccountG s =  gson.fromJson(jsonStream, AccountG.class);
 
 
         try(InputStream jsonStream = response.body().byteStream()) {
             return mapper.mapAccount(jsonStream);
         }
-        //return s.getGraphql().getAccount();
     }
 
     public Search getSearchUserByUsername(String username) throws IOException {
