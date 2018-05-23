@@ -281,7 +281,6 @@ public class InstaService {
         this.instagram.login(user.getInstagram(), user.getInstapass());
         this.instagram.basePage();
         this.account = this.instagram.getAccountByUsername(user.getInstagram());
-        this.dbref = firestore.collection("users").document(String.valueOf(account.getId()));
         return account;
     }
 

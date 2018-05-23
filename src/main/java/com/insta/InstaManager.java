@@ -41,14 +41,14 @@ public class InstaManager {
 
     public StandardResponse login(Request req){
         String token = req.queryParams("token");
-
+        InstaService service = usersMap.get(token);
         try {
-            services = new InstaService.Builder()
+            service = new InstaService.Builder()
                 .setCredentials(token)
                 .setFirestore(db)
                 .setPlan(Plan.TOP)
                 .build();
-            Account account = services.login();
+            Account account = service.login();
             if(account == null)
                 return new StandardResponse(StatusResponse.ERROR, "login fail");
             else
@@ -60,29 +60,38 @@ public class InstaManager {
     }
 
     public StandardResponse search(Request req){
+        String token = req.params("token");
         String username = req.params(":username");
-        return services.search(username);
+        InstaService service = usersMap.get(token);
+        return service.search(username);
     }
 
     public StandardResponse follow(Request req){
         String username = req.params(":username");
-        return services.follow(username);
+        String token = req.params("token");
+        InstaService service = usersMap.get(token);
+        return service.follow(username);
     }
 
     public StandardResponse unfollow(Request req){
-        return services.unfollow();
+        String token = req.params("token");
+        InstaService service = usersMap.get(token);
+        return service.unfollow();
     }
 
     public StandardResponse find(Request req){
         String username = req.params(":username");
-        return services.find(username);
+        String token = req.params("token");
+        InstaService service = usersMap.get(token);
+        return service.find(username);
     }
 
     public StandardResponse getwhitelist(Request req){
-        String apikey = req.queryParams("apikey");
+        String token = req.params("token");
+        InstaService service = usersMap.get(token);
 
         ApiFuture<QuerySnapshot> query = db.collection("users")
-                .document("abc")
+                .document(token)
                 .collection("whitelist").get();
 
         try {
@@ -102,21 +111,29 @@ public class InstaManager {
 
     public StandardResponse addwhitelist(Request req){
         String username = req.params(":username");
-        return services.addwhitelist(username);
+        String token = req.params("token");
+        InstaService service = usersMap.get(token);
+        return service.addwhitelist(username);
     }
 
     public StandardResponse followers(Request req){
         String pages = req.queryParams("pages");
-        return services.followers(pages);
+        String token = req.params("token");
+        InstaService service = usersMap.get(token);
+        return service.followers(pages);
     }
 
     public StandardResponse follows(Request req){
         String pages = req.params(":pages");
-        return services.follows(pages);
+        String token = req.params("token");
+        InstaService service = usersMap.get(token);
+        return service.follows(pages);
     }
 
     public StandardResponse requested(Request req){
-        if(services.getAccount()==null)
+        String token = req.params("token");
+        InstaService service = usersMap.get(token);
+        if(service.getAccount()==null)
             return new StandardResponse(StatusResponse.ERROR, "user not logged");
 
         try {
@@ -126,7 +143,7 @@ public class InstaManager {
             int limit = Integer.valueOf(_limit);
 
             ApiFuture<QuerySnapshot> query = db.collection("users")
-                    .document(String.valueOf(services.getAccount().getId()))
+                    .document(String.valueOf(service.getAccount().getId()))
                     .collection("requested").orderBy("date").startAt(offset).limit(limit).get();
 
             QuerySnapshot querySnapshot = query.get();
@@ -157,7 +174,14 @@ public class InstaManager {
         ApiFuture<WriteResult> result = db.collection("profile").document(user.getUid()).set(user.toMap());
         try {
             System.out.println("WriteResult:" + result.get().toString());
+            InstaService s = new InstaService.Builder()
+                    .setCredentials(user.getUid())
+                    .setFirestore(db)
+                    .setPlan(Plan.TOP)
+                    .build();
+
             return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(result.get()));
+
         } catch (InterruptedException e) {
             e.printStackTrace();
             return new StandardResponse(StatusResponse.ERROR, e.getMessage());
