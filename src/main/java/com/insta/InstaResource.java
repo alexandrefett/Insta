@@ -17,7 +17,11 @@ public class InstaResource {
     }
 
     private void setupEndpoints() {
-        get("/hello", (req, res) -> "Hello World");
+        get("/hello", (req, res) -> {
+            services.base();
+            return "xxxx";
+            }, new JsonTransformer());
+
 
         get(API_CONTEXT + "/:token/login", (req, res) -> {
             return services.login(req);

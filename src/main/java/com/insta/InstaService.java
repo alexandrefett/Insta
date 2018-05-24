@@ -53,7 +53,7 @@ public class InstaService {
         this.firestore = builder.firestore;
         this.token = builder.token;
         HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.NONE);
+        loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
         OkHttpClient httpClient = new OkHttpClient.Builder()
                 .addNetworkInterceptor(loggingInterceptor)
                 .addInterceptor(new UserAgentInterceptor(UserAgents.WIN10_CHROME))
@@ -61,9 +61,17 @@ public class InstaService {
                 .cookieJar(new DefaultCookieJar(new CookieHashSet()))
                 .build();
         this.instagram = new Instagram(httpClient);
-        this.user = _getUserFireAccount(token);
+        //this.user = _getUserFireAccount(token);
     }
 
+    public void base(){
+        try {
+            instagram.basePage();
+            instagram.login("hoteiseverest","everest1357.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
     private User _getUserFireAccount(String token){
         User user = null;
         try{

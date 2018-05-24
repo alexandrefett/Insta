@@ -137,7 +137,6 @@ public class Instagram implements AuthenticatedInsta {
                 .build();
         Response response = executeHttpRequest(request);
 
-
         try(InputStream jsonStream = response.body().byteStream()) {
             return mapper.mapAccount(jsonStream);
         }
@@ -327,7 +326,6 @@ public class Instagram implements AuthenticatedInsta {
             markActivityChecked(activityFeed);
             return activityFeed;
         }
-
     }
 
     private void markActivityChecked(ActivityFeed activityFeed) throws IOException {

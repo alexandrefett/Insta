@@ -32,9 +32,43 @@ public class InstaManager {
                     .setDatabaseUrl("https://instamanager-908a3.firebaseio.com")
                     .build();
             FirebaseApp.initializeApp(options);
-            db = FirestoreClient.getFirestore();
+           db = FirestoreClient.getFirestore();
+           buildUsers();
         }
         catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    public void base(){
+        InstaService s = new InstaService.Builder()
+                .setCredentials("xxxxxx")
+                .setFirestore(db)
+                .setPlan(Plan.TOP)
+                .build();
+        s.base();
+    }
+
+    public void buildUsers(){
+        try {
+            ApiFuture<QuerySnapshot> query = db.collection("profile").get();
+            QuerySnapshot querySnapshot = query.get();
+            List<QueryDocumentSnapshot> documents = querySnapshot.getDocuments();
+            User a;
+            for (QueryDocumentSnapshot q : documents) {
+                a = q.toObject(User.class);
+                if(!usersMap.containsKey(a.getUid())){
+                    InstaService s = new InstaService.Builder()
+                            .setCredentials(a.getUid())
+                            .setFirestore(db)
+                            .setPlan(Plan.TOP)
+                            .build();
+                }
+            }
+        }
+        catch(InterruptedException e){
+            e.printStackTrace();
+        } catch (ExecutionException e) {
             e.printStackTrace();
         }
     }
@@ -42,17 +76,12 @@ public class InstaManager {
     public StandardResponse login(Request req){
         String token = req.queryParams("token");
         InstaService service = usersMap.get(token);
-        try {
-            service = new InstaService.Builder()
-                .setCredentials(token)
-                .setFirestore(db)
-                .setPlan(Plan.TOP)
-                .build();
+        try{
             Account account = service.login();
-            if(account == null)
-                return new StandardResponse(StatusResponse.ERROR, "login fail");
-            else
-                return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(account));
+                if(account == null)
+                    return new StandardResponse(StatusResponse.ERROR, "login fail");
+                else
+                    return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(account));
         }
         catch(IOException e){
             return new StandardResponse(StatusResponse.ERROR, e.getMessage());
@@ -174,12 +203,7 @@ public class InstaManager {
         ApiFuture<WriteResult> result = db.collection("profile").document(user.getUid()).set(user.toMap());
         try {
             System.out.println("WriteResult:" + result.get().toString());
-            InstaService s = new InstaService.Builder()
-                    .setCredentials(user.getUid())
-                    .setFirestore(db)
-                    .setPlan(Plan.TOP)
-                    .build();
-
+            buildUsers();
             return new StandardResponse(StatusResponse.SUCCESS, new Gson().toJsonTree(result.get()));
 
         } catch (InterruptedException e) {
